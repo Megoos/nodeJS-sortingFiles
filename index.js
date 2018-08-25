@@ -55,43 +55,33 @@ function main () {
   };
 
   const readDir = base => {
-    fs.readdir(base, (err, files) => {
-      if (err) {
-        console.error(err);
-        process.exit(1);
-      }
+    try {
+      const files = fs.readdirSync(base);
 
       files.forEach(item => {
-        fs.stat(path.join(base, item), (err, stats) => {
-          if (err) {
-            console.error(err);
-            process.exit(1);
+        const stats = fs.statSync(path.join(base, item));
+        if (stats.isDirectory()) {
+          readDir(path.join(base, item));
+        } else {
+          const newBase = path.join(outputDir, item.charAt(0).toLowerCase());
+
+          if (!fs.existsSync(newBase)) {
+            fs.mkdirSync(newBase);
           }
 
-          if (stats.isDirectory()) {
-            readDir(path.join(base, item));
-          } else {
-            const newBase = path.join(outputDir, item.charAt(0).toLowerCase());
+          fs.copyFileSync(path.join(base, item), path.join(newBase, item));
+          count -= 1;
 
-            if (!fs.existsSync(newBase)) {
-              fs.mkdirSync(newBase);
-            }
-
-            fs.copyFile(path.join(base, item), path.join(newBase, item), err => {
-              if (err) {
-                console.error(err);
-              }
-              count -= 1;
-
-              if (delInput && count === 0) {
-                console.log('Удаление исходной папки');
-                rimraf(inputDir);
-              }
-            });
+          if (delInput && count === 0) {
+            console.log('Удаление исходной папки');
+            rimraf(inputDir);
           }
-        });
+        }
       });
-    });
+    } catch (err) {
+      console.error(err);
+      process.exit(1);
+    }
   };
 
   delInput && countFiles(inputDir);
